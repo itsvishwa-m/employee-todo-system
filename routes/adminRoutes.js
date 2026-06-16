@@ -2,8 +2,12 @@ const express = require("express");
 const router = express.Router();
 
 const { getUsers } = require("../controllers/adminController");
-const { protect } = require("../middleware/authMiddleware");
+const {
+  protect,
+  adminOnly,
+} = require("../middleware/authMiddleware");
 
-router.get("/users", protect, getUsers);
+// Admin Route
+router.get("/users", protect, adminOnly, getUsers);
 
 module.exports = router;
