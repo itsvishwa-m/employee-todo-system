@@ -19,13 +19,12 @@ const createTodo = async (req, res) => {
   }
 };
 
-// Get All Todos
+// Get Logged-in User Todos Only
 const getTodos = async (req, res) => {
   try {
-    const todos = await Todo.find().populate(
-      "assignedTo",
-      "name email"
-    );
+    const todos = await Todo.find({
+      assignedTo: req.user._id,
+    });
 
     res.status(200).json(todos);
   } catch (error) {
@@ -35,21 +34,23 @@ const getTodos = async (req, res) => {
   }
 };
 
-// Update Todo
+// Update Own Todo Only
 const updateTodo = async (req, res) => {
   try {
-    console.log("ID:", req.params.id);
-    console.log("BODY:", req.body);
-
     const todo = await Todo.findOneAndUpdate(
-      { _id: req.params.id },
+      {
+        _id: req.params.id,
+        assignedTo: req.user._id,
+      },
       req.body,
-      { new: true }
+      {
+        new: true,
+      }
     );
 
     if (!todo) {
       return res.status(404).json({
-        message: "Todo not found",
+        message: "Todo not found or not authorized",
       });
     }
 
@@ -64,14 +65,17 @@ const updateTodo = async (req, res) => {
   }
 };
 
-// Delete Todo
+// Delete Own Todo Only
 const deleteTodo = async (req, res) => {
   try {
-    const todo = await Todo.findByIdAndDelete(req.params.id);
+    const todo = await Todo.findOneAndDelete({
+      _id: req.params.id,
+      assignedTo: req.user._id,
+    });
 
     if (!todo) {
       return res.status(404).json({
-        message: "Todo not found",
+        message: "Todo not found or not authorized",
       });
     }
 
