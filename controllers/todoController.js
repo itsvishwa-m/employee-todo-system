@@ -19,12 +19,27 @@ const createTodo = async (req, res) => {
   }
 };
 
-// Get Logged-in User Todos Only
+// Get Todos
 const getTodos = async (req, res) => {
   try {
-    const todos = await Todo.find({
-      assignedTo: req.user._id,
-    });
+    let todos;
+
+    // Admin can see all todos
+    if (req.user.role === "Admin") {
+      todos = await Todo.find().populate(
+        "assignedTo",
+        "name email role"
+      );
+    }
+    // Employee can only see their own todos
+    else {
+      todos = await Todo.find({
+        assignedTo: req.user._id,
+      }).populate(
+        "assignedTo",
+        "name email role"
+      );
+    }
 
     res.status(200).json(todos);
   } catch (error) {
@@ -34,29 +49,36 @@ const getTodos = async (req, res) => {
   }
 };
 
-// Update Own Todo Only
+// Update Todo
 const updateTodo = async (req, res) => {
   try {
-    const todo = await Todo.findOneAndUpdate(
-      {
-        _id: req.params.id,
-        assignedTo: req.user._id,
-      },
-      req.body,
-      {
-        new: true,
-      }
-    );
+    const todo = await Todo.findById(req.params.id);
 
     if (!todo) {
       return res.status(404).json({
-        message: "Todo not found or not authorized",
+        message: "Todo not found",
       });
     }
 
+    // Employee can update only their own todos
+    if (
+      req.user.role !== "Admin" &&
+      todo.assignedTo.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({
+        message: "Access denied",
+      });
+    }
+
+    const updatedTodo = await Todo.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+
     res.status(200).json({
       message: "Todo Updated Successfully",
-      todo,
+      todo: updatedTodo,
     });
   } catch (error) {
     res.status(500).json({
@@ -65,19 +87,28 @@ const updateTodo = async (req, res) => {
   }
 };
 
-// Delete Own Todo Only
+// Delete Todo
 const deleteTodo = async (req, res) => {
   try {
-    const todo = await Todo.findOneAndDelete({
-      _id: req.params.id,
-      assignedTo: req.user._id,
-    });
+    const todo = await Todo.findById(req.params.id);
 
     if (!todo) {
       return res.status(404).json({
-        message: "Todo not found or not authorized",
+        message: "Todo not found",
       });
     }
+
+    // Employee can delete only their own todos
+    if (
+      req.user.role !== "Admin" &&
+      todo.assignedTo.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({
+        message: "Access denied",
+      });
+    }
+
+    await Todo.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
       message: "Todo Deleted Successfully",
