@@ -2,9 +2,10 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
+// Register User
 const registerUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
 
     const userExists = await User.findOne({ email });
 
@@ -20,11 +21,17 @@ const registerUser = async (req, res) => {
       name,
       email,
       password: hashedPassword,
+      role: role || "Employee",
     });
 
     res.status(201).json({
       message: "User Registered Successfully",
-      user,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
     });
   } catch (error) {
     res.status(500).json({
@@ -33,6 +40,7 @@ const registerUser = async (req, res) => {
   }
 };
 
+// Login User
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -54,17 +62,26 @@ const loginUser = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user._id },
+      {
+        id: user._id,
+        role: user.role,
+      },
       process.env.JWT_SECRET,
-      { expiresIn: "1d" }
+      {
+        expiresIn: "1d",
+      }
     );
 
     res.status(200).json({
       message: "Login Successful",
       token,
-      user,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
     });
-
   } catch (error) {
     res.status(500).json({
       message: error.message,
